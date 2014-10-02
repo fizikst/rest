@@ -12,8 +12,19 @@ var app = express();
 
 //Schema
 var DiscountSchema = new mongoose.Schema({
-    title: String,
-    price: String
+    title: String
+    , is_active :{ type: Number, default: 0}
+    , created_at : { type: Date }
+    , updated_at : { type: Date }
+});
+// Function
+DiscountSchema.pre('save', function(next){
+  now = new Date();
+  this.updated_at = now;
+  if ( !this.created_at ) {
+    this.created_at = now;
+  }
+  next();
 });
 //Model
 var DiscountModel = mongoose.model( 'Discount', DiscountSchema );
@@ -36,7 +47,10 @@ app.configure( function() {
 //Router
 //Get a list of all books
 app.get( '/api/v1/discounts', function( request, response ) {
-    return DiscountModel.find(function( err, discounts ) {
+
+//    console.log("#### GET REQUEST ####", request);
+  //{ where: {room: sessionUser.room}, attributes: ['session', 'room'], limit : 2 }
+    return DiscountModel.find({ 'is_active' : 1 }, { '_id': 0, '__v': 0, 'updated_at': 0}, { sort: {'created_at':-1}, limit:100 }, function( err, discounts ) {
         if( !err ) {
             return response.send({'discounts':discounts});
         } else {
@@ -47,7 +61,6 @@ app.get( '/api/v1/discounts', function( request, response ) {
 });
 //Insert a new book
 app.post( '/api/v1/discounts', function( request, response ) {
-	console.log(request);
     var discount = new DiscountModel({
         title: request.body.title,
         price: request.body.price
