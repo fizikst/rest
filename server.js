@@ -13,7 +13,7 @@ var app = express();
 //Schema
 var DiscountSchema = new mongoose.Schema({
     title: String
-    , is_active :{ type: Number, default: 0}
+    , is_active :{ type: Number, default: 1}
     , created_at : { type: Date }
     , updated_at : { type: Date }
 });
