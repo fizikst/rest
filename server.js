@@ -29,6 +29,45 @@ DiscountSchema.pre('save', function(next){
 //Model
 var DiscountModel = mongoose.model( 'Discount', DiscountSchema );
 
+// MYSQL
+var Sequelize = require('sequelize')
+    , sequelize = new Sequelize("invo", "root", "135790", {
+        dialect: "mysql",
+        port:    3306
+    });
+sequelize
+    .authenticate()
+    .complete(function(err) {
+        if (!!err) {
+            console.log('Unable to connect to the database:', err)
+        } else {
+            console.log('Connection has been established successfully.')
+        }
+    });
+
+var Discount = sequelize.define('discount', {
+    id: { type: Sequelize.INTEGER, primaryKey: true, unique: true},
+    title: Sequelize.STRING,
+    percent: Sequelize.DECIMAL(10,2),
+    price: Sequelize.DECIMAL(10,2),
+    date_from: Sequelize.STRING,
+    date_to: Sequelize.STRING,
+    created_at: Sequelize.STRING,
+    updated_at: Sequelize.STRING,
+    catalog_id: Sequelize.INTEGER,
+    user_id: Sequelize.INTEGER
+}, {
+    underscored: true,
+    tableName: 'discount',
+    freezeTableName: true,
+    timestamps: false
+});
+
+
+
+
+
+
 // Configure server
 app.configure( function() {
     //parses request body and populates request.body
@@ -48,16 +87,50 @@ app.configure( function() {
 //Get a list of all books
 app.get( '/api/v1/discounts', function( request, response ) {
 
-//    console.log("#### GET REQUEST ####", request);
-  //{ where: {room: sessionUser.room}, attributes: ['session', 'room'], limit : 2 }
-    return DiscountModel.find({ 'is_active' : 1 }, { '_id': 0, '__v': 0, 'updated_at': 0}, { sort: {'created_at':-1}, limit:100 }, function( err, discounts ) {
-        if( !err ) {
+/*    Discount.findAll()
+        .success(function(discounts) {
             return response.send({'discounts':discounts});
-        } else {
-            console.log( err );
-            return response.send('ERROR');
-        }
-    });
+        })
+        .error(function(err) {
+            if (err) {
+                console.log(err);
+                return response.send('ERROR');
+            }
+        });*/
+
+        sequelize
+            .query(
+            'SELECT d.*, c.title as title_catalog, d.title as title_discount, u.name as vendor from discount as d' +
+                ' Left Join catalog as c on d.catalog_id = c.id' +
+                ' Left Join users as u on d.user_id = u.id', null,
+            { raw: true }, []
+        )
+
+        .success(function(discounts) {
+
+            var list = {};
+            var discountList = [];
+
+            if (discounts.length > 0) {
+                discounts.forEach(function (discount) {
+                    if (list.hasOwnProperty(discount.title_catalog)) {
+                        list[discount.title_catalog].push({is_active:1, title : discount.title_discount, percent: discount.percent, date_from : discount.date_from, date_to : discount.date_to, created_at:discount.created_at, vendor: discount.vendor});
+                    } else {
+                        list[discount.title_catalog] = [];
+                        list[discount.title_catalog].push({is_active:1, title : discount.title_discount, percent: discount.percent, date_from : discount.date_from, date_to : discount.date_to, created_at:discount.created_at, vendor: discount.vendor});
+                    }
+                });
+
+                for(var index in list) {
+                    var tmp ={};
+                    tmp[index] = list[index];
+                    discountList.push(tmp);
+                }
+            }
+
+            return response.send({'discounts':discountList});
+        })
+
 });
 //Insert a new book
 app.post( '/api/v1/discounts', function( request, response ) {
