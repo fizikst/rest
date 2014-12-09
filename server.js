@@ -48,7 +48,13 @@ sequelize
 var Discount = sequelize.define('discount', {
     id: { type: Sequelize.INTEGER, primaryKey: true, unique: true},
     title: Sequelize.STRING,
-    percent: Sequelize.DECIMAL(10,2),
+    percent: {
+        type:Sequelize.DECIMAL(10,2)
+        /*,
+        get : function() {
+            return 100;
+        }*/
+    },
     price: Sequelize.DECIMAL(10,2),
     date_from: Sequelize.STRING,
     date_to: Sequelize.STRING,
@@ -60,7 +66,12 @@ var Discount = sequelize.define('discount', {
     underscored: true,
     tableName: 'discount',
     freezeTableName: true,
-    timestamps: false
+    timestamps: false/*,
+    getterMethods   : {
+        percentСonvert : function()  {
+            return 100;
+        }
+    }*/
 });
 
 
@@ -113,16 +124,17 @@ app.get( '/api/v1/discounts', function( request, response ) {
 
             if (discounts.length > 0) {
                 discounts.forEach(function (discount) {
+
                     if (list.hasOwnProperty(discount.title_catalog)) {
-                        list[discount.title_catalog].push({is_active:1, title : discount.title_discount, percent: discount.percent, date_from : discount.date_from, date_to : discount.date_to, created_at:discount.created_at, vendor: discount.vendor});
+                        list[discount.title_catalog].push({is_active:1, title : discount.title_discount, percent: discount.percent*100, date_from : discount.date_from, date_to : discount.date_to, created_at:discount.created_at, vendor: discount.vendor});
                     } else {
                         list[discount.title_catalog] = [];
-                        list[discount.title_catalog].push({is_active:1, title : discount.title_discount, percent: discount.percent, date_from : discount.date_from, date_to : discount.date_to, created_at:discount.created_at, vendor: discount.vendor});
+                        list[discount.title_catalog].push({is_active:1, title : discount.title_discount, percent: discount.percent*100, date_from : discount.date_from, date_to : discount.date_to, created_at:discount.created_at, vendor: discount.vendor});
                     }
                 });
 
                 for(var index in list) {
-                    var tmp ={};
+                    var tmp = {};
                     tmp[index] = list[index];
                     discountList.push(tmp);
                 }
