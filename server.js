@@ -109,12 +109,15 @@ app.get( '/api/v1/discounts', function( request, response ) {
             }
         });*/
 
+        var date_from = new Date(+request.param('date_from'));
+
         sequelize
             .query(
             'SELECT d.*, c.title as title_catalog, d.title as title_discount, u.name as vendor from discount as d' +
                 ' Left Join catalog as c on d.catalog_id = c.id' +
-                ' Left Join users as u on d.user_id = u.id', null,
-            { raw: true }, []
+                ' Left Join users as u on d.user_id = u.id' +
+                ' Where date_from >= ?', null,
+            { raw: true }, [date_from]
         )
 
         .success(function(discounts) {
