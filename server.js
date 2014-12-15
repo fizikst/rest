@@ -60,7 +60,6 @@ var Discount = sequelize.define('discount', {
     date_to: Sequelize.STRING,
     created_at: Sequelize.STRING,
     updated_at: Sequelize.STRING,
-    catalog_id: Sequelize.INTEGER,
     user_id: Sequelize.INTEGER
 }, {
     underscored: true,
@@ -73,10 +72,42 @@ var Discount = sequelize.define('discount', {
         }
     }*/
 });
+var Catalog = sequelize.define('catalog', {
+    id: { type: Sequelize.INTEGER, primaryKey: true, unique: true},
+    title: Sequelize.STRING,
+    lft: Sequelize.INTEGER,
+    rgt: Sequelize.INTEGER,
+    level: Sequelize.INTEGER
+}, {
+    underscored: true,
+    tableName: 'catalog',
+    freezeTableName: true,
+    timestamps: false/*,
+     getterMethods   : {
+     percentСonvert : function()  {
+     return 100;
+     }
+     }*/
+});
+
+DiscountCatalog = sequelize.define('discount_catalog', {
+    id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    }
+}, {
+    underscored: true,
+    tableName: 'discount_catalog',
+    freezeTableName: true,
+    timestamps: false
+});
+
+Discount.hasMany(Catalog,  { as: 'Categories', through: DiscountCatalog }/*, { as: 'Categories', through: 'discount_catalog' }*/);
+Catalog.hasMany(Discount, { through: DiscountCatalog }/*, { as: 'Discounts', through: 'discount_catalog' }*/);
 
 
-
-
+//sequelize.sync();
 
 
 // Configure server
@@ -111,7 +142,35 @@ app.get( '/api/v1/discounts', function( request, response ) {
 
 //        var date_from = new Date(+request.param('date_from'));
 
-        sequelize
+        Discount.find(26).success(function(discount) {
+            discount.getCategories().success(function(categories) {
+
+                for (cat in categories) {
+                    console.log("---------------------------------------------------"+categories[cat]['title']);
+                }
+
+            });
+            // project will be an instance of Project and stores the content of the table entry
+            // with id 123. if such an entry is not defined you will get null
+        });
+/*
+    Discount.create({'title':'rere5q11we', 'user_id':7}).success(function(discount) {
+        Catalog.find(9).success(function(cat) {
+            discount.setCategories([cat]).success(function (t) {
+                console.log("saved="+t);
+            });
+        });
+
+    }).error(function (err) {
+            console.log(err);
+        }
+    );
+*/
+
+        return response.send({'discounts':[]});
+
+
+ /*       sequelize
             .query(
             'SELECT d.*, c.title as title_catalog, d.title as title_discount, u.name as vendor from discount as d' +
                 ' Left Join catalog as c on d.catalog_id = c.id' +
@@ -144,7 +203,7 @@ app.get( '/api/v1/discounts', function( request, response ) {
             }
 
             return response.send({'discounts':discountList});
-        })
+        })*/
 
 });
 //Insert a new book
