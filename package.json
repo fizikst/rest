@@ -1,11 +1,12 @@
 {
-    "name": "library-rest-api",
-    "version": "0.0.1",
-    "description": "A simple library REST api",
-    "dependencies": {
-        "express": "~3.1.0",
-	"mongoose": "~3.5.5",
-        "sequelize": "*",
-	"mysql": "^2.3.2"
-    }
+  "name": "library-rest-api",
+  "version": "0.0.1",
+  "description": "A simple library REST api",
+  "dependencies": {
+    "express": "~3.1.0",
+    "mongoose": "~3.5.5",
+    "sequelize": "*",
+    "mysql": "^2.3.2",
+    "async": "~0.9.0"
+  }
 }

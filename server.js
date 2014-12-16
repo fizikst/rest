@@ -9,6 +9,7 @@ mongoose.connect( 'mongodb://localhost/discount' );
 
 //Create server
 var app = express();
+var async = require("async");
 
 //Schema
 var DiscountSchema = new mongoose.Schema({
@@ -82,12 +83,36 @@ var Catalog = sequelize.define('catalog', {
     underscored: true,
     tableName: 'catalog',
     freezeTableName: true,
-    timestamps: false/*,
-     getterMethods   : {
-     percentСonvert : function()  {
-     return 100;
-     }
-     }*/
+    timestamps: false
+});
+
+var Vendor = sequelize.define('vendor', {
+    id: { type: Sequelize.INTEGER, primaryKey: true, unique: true},
+    title: Sequelize.STRING,
+    phone: Sequelize.STRING,
+    street: Sequelize.STRING,
+    user_id: Sequelize.INTEGER,
+    created_at: Sequelize.STRING
+}, {
+    underscored: true,
+    tableName: 'vendor',
+    freezeTableName: true,
+    timestamps: false
+});
+
+var User = sequelize.define('users', {
+    id: { type: Sequelize.INTEGER, primaryKey: true, unique: true},
+    username: Sequelize.STRING,
+    password: Sequelize.STRING,
+    name: Sequelize.STRING,
+    email: Sequelize.STRING,
+    created_at: Sequelize.STRING,
+    active: Sequelize.STRING
+}, {
+    underscored: true,
+    tableName: 'users',
+    freezeTableName: true,
+    timestamps: false
 });
 
 DiscountCatalog = sequelize.define('discount_catalog', {
@@ -103,12 +128,29 @@ DiscountCatalog = sequelize.define('discount_catalog', {
     timestamps: false
 });
 
+DiscountVendor = sequelize.define('discount_vendor', {
+    id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    }
+}, {
+    underscored: true,
+    tableName: 'discount_vendor',
+    freezeTableName: true,
+    timestamps: false
+});
+
 Discount.hasMany(Catalog,  { as: 'Categories', through: DiscountCatalog }/*, { as: 'Categories', through: 'discount_catalog' }*/);
 Catalog.hasMany(Discount, { through: DiscountCatalog }/*, { as: 'Discounts', through: 'discount_catalog' }*/);
 
+Discount.hasMany(Vendor,  { as: 'Vendors', through: DiscountVendor }/*, { as: 'Categories', through: 'discount_catalog' }*/);
+Vendor.hasMany(Discount, { through: DiscountVendor }/*, { as: 'Discounts', through: 'discount_catalog' }*/);
+
+User.hasMany(Discount, { as: 'Users' });
+Discount.belongsTo(User);
 
 //sequelize.sync();
-
 
 // Configure server
 app.configure( function() {
@@ -142,33 +184,71 @@ app.get( '/api/v1/discounts', function( request, response ) {
 
 //        var date_from = new Date(+request.param('date_from'));
 
-        Discount.find(26).success(function(discount) {
-            discount.getCategories().success(function(categories) {
+        var count = 0;
+        var discountList = [];
+        Discount.findAll().success(function(discounts) {
 
-                for (cat in categories) {
-                    console.log("---------------------------------------------------"+categories[cat]['title']);
-                }
+            discounts.forEach(function (discount) {
+
+                async.series({
+                        categories: function(cb){
+                            discount.getCategories().success(function(categories) {
+
+                                var categoryList = [];
+                                for (category in categories) {
+                                    categoryList.push({'id':categories[category]['id'], 'title':categories[category]['title']});
+                                }
+
+                                cb(null, categoryList);
+                            }).error(function(err) {
+                                cb(err);
+                            });
+
+                        },
+                        locations: function(cb){
+                            discount.getVendors().success(function(vendors) {
+
+                                var vendorList = [];
+                                for (vendor in vendors) {
+                                    vendorList.push({'id':vendors[vendor]['id'],'title':vendors[vendor]['title'], 'phone':vendors[vendor]['phone'], 'street':vendors[vendor]['street']});
+                                }
+
+                                cb(null, vendorList);
+                            }).error(function(err) {
+                                cb(err);
+                            });
+                        },
+                        vendor: function(cb){
+
+                            discount.getUser().success(function(user) {
+                                cb(null, user['name']);
+                            }).error(function(err) {
+                                cb(err);
+                            });
+                        }
+                    },
+                    function(err, result) {
+                        count++;
+                        if (err) {
+                            console.log("ERROR : "+err);
+                        } else {
+                            result.title = discount.title;
+                            result.date_from = discount.date_from;
+                            result.date_to = discount.date_to;
+                            result.created_at = discount.created_at;
+                            result.percent = discount.percent*100;
+                            discountList.push(result);
+                        }
+
+                        if(count == discounts.length) { // check if all callbacks have been called
+                            Send(response, discountList);
+                        }
+
+                    });
 
             });
-            // project will be an instance of Project and stores the content of the table entry
-            // with id 123. if such an entry is not defined you will get null
+
         });
-/*
-    Discount.create({'title':'rere5q11we', 'user_id':7}).success(function(discount) {
-        Catalog.find(9).success(function(cat) {
-            discount.setCategories([cat]).success(function (t) {
-                console.log("saved="+t);
-            });
-        });
-
-    }).error(function (err) {
-            console.log(err);
-        }
-    );
-*/
-
-        return response.send({'discounts':[]});
-
 
  /*       sequelize
             .query(
@@ -206,6 +286,10 @@ app.get( '/api/v1/discounts', function( request, response ) {
         })*/
 
 });
+
+function Send(response, discountList) {
+    return response.send({'discounts':discountList});
+}
 //Insert a new book
 app.post( '/api/v1/discounts', function( request, response ) {
     var discount = new DiscountModel({
