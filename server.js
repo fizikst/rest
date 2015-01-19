@@ -186,7 +186,8 @@ app.get( '/api/v1/discounts', function( request, response ) {
 
         var count = 0;
         var discountList = [];
-        Discount.findAll().success(function(discounts) {
+        var currentDate = new Date();
+        Discount.findAll({where: ['created_at >= ?', currentDate]}).success(function(discounts) {
 
             discounts.forEach(function (discount) {
 
